@@ -15,3 +15,12 @@
         JWTConfig jwtConfigMock = Mockito.mock(JWTConfig.class);
         ProcessSummaryUtility processSummaryUtilityMock = Mockito.mock(ProcessSummaryUtility.class);
 
+context.getRouteDefinition("baseRoute").adviceWith(context, new AdviceWithRouteBuilder() {
+    @Override
+    public void configure() throws Exception {
+        // Replace beans in the route with mocks
+        weaveById("dataStorageService").replace().bean(dataStorageServiceMock);
+        weaveById("jwtConfig").replace().bean(jwtConfigMock);
+        weaveById("processSummaryUtility").replace().bean(processSummaryUtilityMock);
+    }
+});
