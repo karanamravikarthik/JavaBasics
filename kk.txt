@@ -1,0 +1,9 @@
+@Override
+    protected CamelContext createCamelContext() throws Exception {
+        return super.createCamelContext();
+    }
+
+    @Override
+    protected RoutesBuilder createRouteBuilder() throws Exception {
+        return new BaseRoute();
+    }
