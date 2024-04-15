@@ -7,3 +7,11 @@
     protected RoutesBuilder createRouteBuilder() throws Exception {
         return new BaseRoute();
     }
+
+ @Test
+    public void testRoute() throws Exception {
+        // Mock dependencies
+        DataStorageService dataStorageServiceMock = Mockito.mock(DataStorageService.class);
+        JWTConfig jwtConfigMock = Mockito.mock(JWTConfig.class);
+        ProcessSummaryUtility processSummaryUtilityMock = Mockito.mock(ProcessSummaryUtility.class);
+
