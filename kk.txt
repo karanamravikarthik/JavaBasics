@@ -1,75 +1,43 @@
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+@RunWith(CamelTestRunner.class)
+public class MyCamelRouteTest {
 
-import static org.mockito.Mockito.verify;
-
-public class MyRouteTest extends CamelTestSupport {
-
-    @EndpointInject("mock:direct:sendEmail" + processSuffix)
-    protected MockEndpoint mockResult;
+    @Mock
+    private ProcessSummaryUtility processSummaryUtilityMock;
 
     @Mock
     private AfpFileService afpFileServiceMock;
 
-    // Replace with actual values for your test
-    private final String inputFilePath = "data/input";
-    private final String afpFileKeys = "key1,key2";
-    private final String afpFileURI = "afp://uri";
-    private final String afpFileTokens = "token1,token2";
-    private final String processSuffix = "-test";
+    @Produce("direct:startAfpFileProcessing")
+    private ProducerTemplate producer;
 
-    @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
-        return new RouteBuilder() {
-            @Override
-            public void configure() throws Exception {
-                // Replace with your actual route definition here
-                from("direct:startAfpFileProcessing" + processSuffix)
-                        .noAutoStartup()
-                        .to("mock:output_afp_file_reader" + processSuffix);
+    @EndpointInject("mock:output")  // Replace "output" with your actual output endpoint name
+    private MockEndpoint mockOutput;
 
-                test("Test AFP file processing route")
-                        .from("direct:startAfpFileProcessing" + processSuffix)
-                        .pollEnrich(resourceUri: inputFilePath + "?antInclude=*.afp&delete=true")
-                        .bean(ProcessSummaryUtility.class, "setStartTime")
-                        .bean(ProcessSummaryUtility.class, "updateAfpFileName")
-                        .routeId("output_afp_file_reader" + processSuffix)
-                        .id("output_afp_file_reader" + processSuffix)
-                        .setProperty("afpKeys", simple(afpFileKeys))
-                        .setProperty("uripath", simple(afpFileURI))
-                        .setProperty("tokens", simple(afpFileTokens))
-                        .pipeline()
-                        .log("Processing AFP file, Name: ${file:name}")
-                        .bean(afpFileServiceMock, "process") // Use mocked bean here
-                        .bean(ProcessSummaryUtility.class, "updateTimeTakenToProcessAfpData")
-                        .bean(ProcessSummaryUtility.class, "updateNumberOfRecordsWithTleSaved")
-                        .to("mock:direct:sendEmail" + processSuffix);
-            }
-        };
+    private MyCamelRoute myCamelRoute;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        myCamelRoute = new MyCamelRoute(processSummaryUtilityMock, afpFileServiceMock);
     }
 
     @Test
-    public void testRouteWithValidFile() throws Exception {
-        // Prepare a mock message with appropriate content
-        Message message = createExchange().getInMessage();
-        // Set expected content based on your processing logic
-        message.setBody("Sample AFP file content");
+    public void testProcessAfpFile() throws Exception {
+        // Unit test ProcessSummaryUtility methods (refer to previous example)
+        // ... your unit tests for ProcessSummaryUtility methods ...
 
-        // Send the message to the starting point of the route
-        template.sendBody("direct:startAfpFileProcessing" + processSuffix, message);
+        // Camel Test Kit portion
+        String fileName = "test.afp";
+        String expectedBody = "Processed " + fileName;
 
-        // Assert that the message reaches the expected endpoint
-        mockResult.expectedMessageCount(1);
-        mockResult.assertIsSatisfied();
+        producer.sendBody(fileName);
 
-        // Verify interactions with the mocked bean
-        verify(afpFileServiceMock).process(Mockito.any(Exchange.class)); // Verify process is called
+        mockOutput.expectedMessageCount(1);
+        mockOutput.expectedBodiesReceived(expectedBody);
+
+        mockOutput.assertIsSatisfied();
+
+        // Optional: Verify interactions with mocked beans (if relevant)
+        // verify(processSummaryUtilityMock, times(1)).setStartTime(any());
+        // ... similar verifications for other methods if needed ...
     }
 }
