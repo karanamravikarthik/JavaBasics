@@ -1,66 +1,55 @@
 import org.apache.camel.CamelContext;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(MockitoExtension.class)
 public class BaseRouteTest extends CamelTestSupport {
 
-    @BeforeEach
-    public void setUp() throws Exception {
-        // Apply adviceWith to the route
-        AdviceWithRouteBuilder.adviceWith(context, "baseRoute", a -> {
-            // Replace the input endpoint with a direct endpoint
-            a.replaceFromWith("direct:start");
+    @Mock
+    private DataStorageService dataStorageServiceMock;
 
-            // Replace beans in the route with mocks
-            a.weaveById("dataStorageService").replace().bean(dataStorageServiceMock);
-            a.weaveById("jwtConfig").replace().bean(jwtConfigMock);
-            a.weaveById("processSummaryUtility").replace().bean(processSummaryUtilityMock);
-        });
+    @Mock
+    private JWTConfig jwtConfigMock;
 
-        // Start Camel context after adviceWith is applied
-        context.start();
+    @Mock
+    private ProcessSummaryUtility processSummaryUtilityMock;
+
+    @Mock
+    private AfpFileService afpFileServiceMock;
+
+    @Override
+    protected CamelContext createCamelContext() throws Exception {
+        CamelContext context = super.createCamelContext();
+        context.getRegistry().bind("dataStorageService", dataStorageServiceMock);
+        context.getRegistry().bind("jwtConfig", jwtConfigMock);
+        context.getRegistry().bind("processSummaryUtility", processSummaryUtilityMock);
+        context.getRegistry().bind("afpFileService", afpFileServiceMock);
+        return context;
+    }
+
+    @Override
+    protected RouteBuilder createRouteBuilder() throws Exception {
+        return new BaseRoute();
     }
 
     @Test
-    public void testRoute() throws Exception {
+    public void testAfpFileProcessingRoute() throws Exception {
         // Define mock behavior
-        Mockito.when(dataStorageServiceMock.searchFields()).thenReturn("Search fields result");
-        Mockito.when(dataStorageServiceMock.sensitiveFields()).thenReturn("Sensitive fields result");
+        when(afpFileServiceMock.processKeyPairAndSendToDataStorage()).thenReturn("Processed AFP file");
+        when(processSummaryUtilityMock.updateTimeTakenToProcessAfpData()).thenReturn("Time taken updated");
+        when(processSummaryUtilityMock.updateNumber0fRecordsWithTleSaved()).thenReturn("Number of records updated");
 
         // Send a test message to the route
         template.sendBody("direct:start", "Test message");
 
         // Verify mock invocations
-        Mockito.verify(dataStorageServiceMock).searchFields();
-        Mockito.verify(dataStorageServiceMock).sensitiveFields();
-        Mockito.verify(jwtConfigMock).clearJwtToken();
-        Mockito.verify(processSummaryUtilityMock).setStartTime();
-        Mockito.verify(processSummaryUtilityMock).updateXmlFileName();
-        Mockito.verify(processSummaryUtilityMock).updateInputFilePath();
+        verify(afpFileServiceMock).processKeyPairAndSendToDataStorage();
+        verify(processSummaryUtilityMock).updateTimeTakenToProcessAfpData();
+        verify(processSummaryUtilityMock).updateNumber0fRecordsWithTleSaved();
         // Add more verifications as needed
     }
-
-    @Override
-    protected CamelContext createCamelContext() throws Exception {
-        // Create and configure mocks
-        dataStorageServiceMock = Mockito.mock(DataStorageService.class);
-        jwtConfigMock = Mockito.mock(JWTConfig.class);
-        processSummaryUtilityMock = Mockito.mock(ProcessSummaryUtility.class);
-
-        // Create and configure Camel context
-        CamelContext context = super.createCamelContext();
-        context.getRegistry().bind("dataStorageService", dataStorageServiceMock);
-        context.getRegistry().bind("jwtConfig", jwtConfigMock);
-        context.getRegistry().bind("processSummaryUtility", processSummaryUtilityMock);
-
-        return context;
-    }
-
-    // Define mock beans
-    private DataStorageService dataStorageServiceMock;
-    private JWTConfig jwtConfigMock;
-    private ProcessSummaryUtility processSummaryUtilityMock;
 }
