@@ -1,69 +1,75 @@
-import org.apache.camel.CamelContext;
+import org.apache.camel.EndpointInject;
+import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.junit5.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
 
-@ExtendWith(MockitoExtension.class)
-public class BaseRouteTest extends CamelTestSupport {
+public class MyRouteTest extends CamelTestSupport {
 
-    @Mock
-    private ProcessSummaryUtility processSummaryUtilityMock;
+    @EndpointInject("mock:direct:sendEmail" + processSuffix)
+    protected MockEndpoint mockResult;
 
     @Mock
     private AfpFileService afpFileServiceMock;
 
-    @Override
-    protected CamelContext createCamelContext() throws Exception {
-        CamelContext context = super.createCamelContext();
-        context.getRegistry().bind("processSummaryUtility", processSummaryUtilityMock);
-        context.getRegistry().bind("afpFileService", afpFileServiceMock);
-        return context;
-    }
+    // Replace with actual values for your test
+    private final String inputFilePath = "data/input";
+    private final String afpFileKeys = "key1,key2";
+    private final String afpFileURI = "afp://uri";
+    private final String afpFileTokens = "token1,token2";
+    private final String processSuffix = "-test";
 
     @Override
     protected RouteBuilder createRouteBuilder() throws Exception {
         return new RouteBuilder() {
             @Override
             public void configure() throws Exception {
-                from("direct:startAfpFileProcessing")
-                        .pollEnrich("file:" + inputFilePath + "?antInclude=*.afp&delete=true")
+                // Replace with your actual route definition here
+                from("direct:startAfpFileProcessing" + processSuffix)
+                        .noAutoStartup()
+                        .to("mock:output_afp_file_reader" + processSuffix);
+
+                test("Test AFP file processing route")
+                        .from("direct:startAfpFileProcessing" + processSuffix)
+                        .pollEnrich(resourceUri: inputFilePath + "?antInclude=*.afp&delete=true")
                         .bean(ProcessSummaryUtility.class, "setStartTime")
                         .bean(ProcessSummaryUtility.class, "updateAfpFileName")
-                        .routeId("output_afp_file_reader")
-                        .id("output_afp_file_reader")
+                        .routeId("output_afp_file_reader" + processSuffix)
+                        .id("output_afp_file_reader" + processSuffix)
                         .setProperty("afpKeys", simple(afpFileKeys))
                         .setProperty("uripath", simple(afpFileURI))
                         .setProperty("tokens", simple(afpFileTokens))
                         .pipeline()
                         .log("Processing AFP file, Name: ${file:name}")
-                        .bean(AfpFileService.class, "process")
+                        .bean(afpFileServiceMock, "process") // Use mocked bean here
                         .bean(ProcessSummaryUtility.class, "updateTimeTakenToProcessAfpData")
                         .bean(ProcessSummaryUtility.class, "updateNumberOfRecordsWithTleSaved")
-                        .to("direct:sendEmail" + processSuffix)
-                        .end();
+                        .to("mock:direct:sendEmail" + processSuffix);
             }
         };
     }
 
     @Test
-    public void testAfpFileProcessingRoute() throws Exception {
-        // Define mock behavior
-        when(afpFileServiceMock.process()).thenReturn("Processed AFP file");
-        when(processSummaryUtilityMock.updateTimeTakenToProcessAfpData()).thenReturn("Time taken updated");
-        when(processSummaryUtilityMock.updateNumberOfRecordsWithTleSaved()).thenReturn("Number of records updated");
+    public void testRouteWithValidFile() throws Exception {
+        // Prepare a mock message with appropriate content
+        Message message = createExchange().getInMessage();
+        // Set expected content based on your processing logic
+        message.setBody("Sample AFP file content");
 
-        // Send a test message to the route
-        template.sendBody("direct:startAfpFileProcessing", "Test message");
+        // Send the message to the starting point of the route
+        template.sendBody("direct:startAfpFileProcessing" + processSuffix, message);
 
-        // Verify mock invocations
-        verify(afpFileServiceMock).process();
-        verify(processSummaryUtilityMock).updateTimeTakenToProcessAfpData();
-        verify(processSummaryUtilityMock).updateNumberOfRecordsWithTleSaved();
-        // Add more verifications as needed
+        // Assert that the message reaches the expected endpoint
+        mockResult.expectedMessageCount(1);
+        mockResult.assertIsSatisfied();
+
+        // Verify interactions with the mocked bean
+        verify(afpFileServiceMock).process(Mockito.any(Exchange.class)); // Verify process is called
     }
 }
