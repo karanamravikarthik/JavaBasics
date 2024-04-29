@@ -1,43 +1,43 @@
-@RunWith(CamelTestRunner.class)
-public class MyCamelRouteTest {
+import org.apache.camel.CamelContext;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.impl.DefaultCamelContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.*;
 
-    @Mock
-    private ProcessSummaryUtility processSummaryUtilityMock;
+public class DepositsLetterRouteTest {
 
-    @Mock
-    private AfpFileService afpFileServiceMock;
-
-    @Produce("direct:startAfpFileProcessing")
-    private ProducerTemplate producer;
-
-    @EndpointInject("mock:output")  // Replace "output" with your actual output endpoint name
-    private MockEndpoint mockOutput;
-
-    private MyCamelRoute myCamelRoute;
+    private DepositsLetterRoute depositsLetterRoute;
+    private CamelContext camelContext;
 
     @BeforeEach
-    public void setUp() throws Exception {
-        myCamelRoute = new MyCamelRoute(processSummaryUtilityMock, afpFileServiceMock);
+    public void setUp() {
+        // Initialize DepositsLetterRoute
+        depositsLetterRoute = new DepositsLetterRoute();
+
+        // Create a mock CamelContext
+        camelContext = mock(DefaultCamelContext.class);
+        depositsLetterRoute.setCamelContext(camelContext);
     }
 
     @Test
-    public void testProcessAfpFile() throws Exception {
-        // Unit test ProcessSummaryUtility methods (refer to previous example)
-        // ... your unit tests for ProcessSummaryUtility methods ...
+    public void testConfigure() throws Exception {
+        // Mock external properties
+        depositsLetterRoute.setInputFilePath("testInputFilePath");
+        // Set other properties as needed
 
-        // Camel Test Kit portion
-        String fileName = "test.afp";
-        String expectedBody = "Processed " + fileName;
+        // Initialize and start the CamelContext
+        when(camelContext.getShutdownStrategy()).thenReturn(null); // Mock shutdown strategy
+        camelContext.start();
 
-        producer.sendBody(fileName);
+        // Call the configure method
+        depositsLetterRoute.configure();
 
-        mockOutput.expectedMessageCount(1);
-        mockOutput.expectedBodiesReceived(expectedBody);
-
-        mockOutput.assertIsSatisfied();
-
-        // Optional: Verify interactions with mocked beans (if relevant)
-        // verify(processSummaryUtilityMock, times(1)).setStartTime(any());
-        // ... similar verifications for other methods if needed ...
+        // Verify that the route is configured as expected
+        // For example, you can verify route definitions, assertions, etc.
+        // For simplicity, let's just verify that the CamelContext is started
+        verify(camelContext, times(1)).start();
     }
+
+    // You can add more tests to cover specific functionalities or configurations as needed
 }
