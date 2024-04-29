@@ -3,32 +3,33 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import static org.mockito.Mockito.*;
 
 public class DepositsLetterRouteTest {
 
     private DepositsLetterRoute depositsLetterRoute;
+
+    @Mock
     private CamelContext camelContext;
 
     @BeforeEach
-    public void setUp() {
-        // Initialize DepositsLetterRoute
+    public void setUp() throws Exception {
+        MockitoAnnotations.initMocks(this); // Initialize mocks
         depositsLetterRoute = new DepositsLetterRoute();
-
-        // Create a mock CamelContext
-        camelContext = mock(DefaultCamelContext.class);
         depositsLetterRoute.setCamelContext(camelContext);
     }
 
     @Test
     public void testConfigure() throws Exception {
-        // Mock external properties
+        // Set properties using setter methods
         depositsLetterRoute.setInputFilePath("testInputFilePath");
         // Set other properties as needed
 
         // Initialize and start the CamelContext
         when(camelContext.getShutdownStrategy()).thenReturn(null); // Mock shutdown strategy
-        camelContext.start();
+        when(camelContext.start()).thenReturn(null); // Mock context start
 
         // Call the configure method
         depositsLetterRoute.configure();
