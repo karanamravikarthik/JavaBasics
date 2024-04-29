@@ -1,0 +1,64 @@
+import org.apache.camel.Exchange;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.util.Arrays;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
+
+public class YourClassTest {
+
+    @Mock
+    private Exchange exchange;
+
+    @Mock
+    private ProcessSummaryUtility processSummaryUtility;
+
+    @InjectMocks
+    private YourClass yourClass; // Replace YourClass with the name of your class containing the isValidOrgRecord method
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    public void testValidOrgRecord() {
+        // Setup
+        String xmlRecord = "<xml>...</xml>";
+        String busOrgProp = "Org1,Org2,Org3";
+        String currentRecordBusOrg = "Org2";
+
+        when(exchange.getIn().getBody(String.class)).thenReturn(xmlRecord);
+        when(exchange.getProperty("busQngs", String.class)).thenReturn(busOrgProp);
+
+        // Execution
+        boolean isValid = yourClass.isValidOrgRecord(exchange);
+
+        // Verification
+        assertTrue(isValid);
+    }
+
+    @Test
+    public void testInvalidOrgRecord() {
+        // Setup
+        String xmlRecord = "<xml>...</xml>";
+        String busOrgProp = "Org1,Org2,Org3";
+        String currentRecordBusOrg = "Org4";
+
+        when(exchange.getIn().getBody(String.class)).thenReturn(xmlRecord);
+        when(exchange.getProperty("busQngs", String.class)).thenReturn(busOrgProp);
+
+        // Execution
+        boolean isValid = yourClass.isValidOrgRecord(exchange);
+
+        // Verification
+        assertFalse(isValid);
+        verify(processSummaryUtility).updateNumberOfRecordsExcluded(exchange);
+    }
+}
